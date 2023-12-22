@@ -156,9 +156,6 @@ public class HttpTrigger1
             _logger.LogError("No user supplied.");
             responseText = $"Please supply a user name via the user parameter. For example: {req.Url}?user=fred";
             responseCode = HttpStatusCode.BadRequest;
-            // Tell New Relic there was an error!
-            var errorAttributes = new Dictionary<string, string>{};
-            NewRelic.Api.Agent.NewRelic.NoticeError("No user supplied.", errorAttributes);
         }
 
         // Build and return the response.
@@ -167,6 +164,14 @@ public class HttpTrigger1
         transaction.AddCustomAttribute("http.statusCode", responseCode);
         response.Headers.Add("Content-Type", "text/plain; charset=utf-8");
         response.WriteString(responseText);
+
+        // Tell New Relic there was an error!
+        if (responseCode != HttpStatusCode.OK)
+        {
+            var errorAttributes = new Dictionary<string, string>{{"HttpResponse", $"{responseCode}"},{"HttpCode", $"{(int)responseCode}"}};
+            NewRelic.Api.Agent.NewRelic.NoticeError($"Http response {responseCode}.", errorAttributes);
+        }
+
         _logger.LogInformation("mikeBHttpFEDNExample Function App complete.");
 
         return response;
